@@ -1,0 +1,376 @@
+---
+title: "Divvy Exercise Full Year Analysis"
+author: "Cassiano Oliveira"
+date: "2024-03-24"
+output: 
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+---
+
+### **Setting up my environment.**
+
+Notes: This analysis is based on the **Divvy case study** "'Sophisticated, Clear, and Polished’: Divvy and Data Visualization" written by [Kevin Hartman](https://artscience.blog/home/divvy-dataviz-case-study).
+
+The purpose of ths script is to consolidate downloaded Divvy data into a single data frame and then conduct simple analysis to help answer the key question:**In what ways do members and casual riders use Divvy bikes differently?**
+
+The data is mad available by [Motivate International Inc](https://divvybikes.com/data-license-agreement). This is public data that can be used to explore how different types of customers are using Cyclistic bikes. However, due to data privacy, using passengers' personally identifiable information is prohibited.
+
+
+![Source:https://artscience.blog/.](https://images.squarespace-cdn.com/content/v1/5e8f31c8664e7b358a701917/1600853755630-29XAUBBXU45UGP1DWRHX/ch_Divvy-bikes+%281%29.jpg?format=2500w)
+
+
+#### The following packages are required to run the code and reproduce the results:
+
+* `tidyverse` for data import and wrangling.
+* `lubridate` for date functions.
+* `ggplot` for visualization.
+* `dplyr` Data manipulation library with a focus on data frames.
+* `readr` for reading and writing structured text files.
+* `hms` for representing and manipulating periods of time.
+* `tibble` Modern alternative to data frames.
+* `doBy` for grouping and summarizing data.
+
+##### Loading packages.
+```{r}
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(tibble)
+setwd("C:/Users/cassi/Documents/R_STUDIO//DIVVY_TRIP_DATA") #I didn't forget the recommendation ;)
+```
+### **Step 1:** Collect data.
+
+#### Upload Divvy datasets `csv files` here. 
+```{r}
+dt_2023_03 <- read_csv("C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/dt_2023_03.csv")
+dt_2023_04 <- read_csv("C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/dt_2023_04.csv")
+dt_2023_05 <- read_csv("C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/dt_2023_05.csv")
+dt_2023_06 <- read_csv("C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/dt_2023_06.csv")
+dt_2023_07 <- read_csv("C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/dt_2023_07.csv")
+dt_2023_08 <- read_csv("C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/dt_2023_08.csv")
+dt_2023_09 <- read_csv("C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/dt_2023_09.csv")
+dt_2023_10 <- read_csv("C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/dt_2023_10.csv")
+dt_2023_11 <- read_csv("C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/dt_2023_11.csv")
+dt_2023_12 <- read_csv("C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/dt_2023_12.csv")
+dt_2024_01 <- read_csv("C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/dt_2024_01.csv")
+dt_2024_02 <- read_csv("C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/dt_2024_02.csv")
+```
+##### Visualizing the data.
+```{r}
+View(dt_2023_03)
+View(dt_2023_04)
+View(dt_2023_05)
+View(dt_2023_06)
+View(dt_2023_07)
+View(dt_2023_08)
+View(dt_2023_09)
+View(dt_2023_10)
+View(dt_2023_11)
+View(dt_2023_12)
+View(dt_2024_01)
+View(dt_2024_02)
+```
+### **Step 2:** Combining the data into a single file.
+
+#### The column names of each of the files were compared.
+```{r}
+colnames(dt_2023_03)
+colnames(dt_2023_04)
+colnames(dt_2023_05)
+colnames(dt_2023_06)
+colnames(dt_2023_07)
+colnames(dt_2023_08)
+colnames(dt_2023_09)
+colnames(dt_2023_10)
+colnames(dt_2023_11)
+colnames(dt_2023_12)
+colnames(dt_2024_01)
+colnames(dt_2024_02)
+```
+##### List of all your tables.
+```{r}
+table_list <- list(dt_2023_03, dt_2023_04, dt_2023_05, dt_2023_06, dt_2023_07, dt_2023_08, dt_2023_09, dt_2023_10, dt_2023_11, dt_2023_12, dt_2024_01, dt_2024_02)
+```
+##### Function to check if columns are identical in all tables.
+```{r}
+check_columns <- function(table_list) {
+  columns_first_table <- names(table_list[[1]])
+  for (i in 2:length(table_list)) {
+    if (!identical(names(table_list[[i]]), columns_first_table)) {
+      return(FALSE)
+    }
+  }
+  return(TRUE)
+}
+if (check_columns(table_list)) {
+  print("All tables have the same columns.")
+} else {
+  print("Tables do not have the same columns.")
+}
+```
+##### Inspect the DataFrames and look for incongruencies.
+```{r}
+str(dt_2023_03)
+str(dt_2023_04)
+str(dt_2023_05)
+str(dt_2023_06)
+str(dt_2023_07)
+str(dt_2023_08)
+str(dt_2023_09)
+str(dt_2023_10)
+str(dt_2023_11)
+str(dt_2023_12)
+str(dt_2024_01)
+str(dt_2024_02)
+```
+##### Some columns were converted so that the analysis could continue.
+```{r}
+dt_2023_03 <- mutate(dt_2023_03, 
+                     started_at = as.POSIXct(started_at, format = "%d/%m/%Y %H:%M:%S"),
+                     ended_at = as.POSIXct(ended_at, format = "%d/%m/%Y %H:%M:%S"))
+
+dt_2023_04 <- mutate(dt_2023_04, 
+                     started_at = as.POSIXct(started_at, format = "%d/%m/%Y %H:%M:%S"),
+                     start_station_id = as.character(start_station_id),
+                     ended_at = as.POSIXct(ended_at, format = "%d/%m/%Y %H:%M:%S"))
+
+dt_2023_05 <- mutate(dt_2023_05, 
+                     started_at = as.POSIXct(started_at, format = "%d/%m/%Y %H:%M:%S"),
+                     ended_at = as.POSIXct(ended_at, format = "%d/%m/%Y %H:%M:%S"))
+
+dt_2023_06 <- mutate(dt_2023_06, 
+                     started_at = as.POSIXct(started_at, format = "%d/%m/%Y %H:%M:%S"),
+                     end_station_id = as.character(end_station_id),
+                     ended_at = as.POSIXct(ended_at, format = "%d/%m/%Y %H:%M:%S"))
+
+dt_2023_07 <- mutate(dt_2023_07, 
+                     started_at = as.POSIXct(started_at, format = "%d/%m/%Y %H:%M:%S"),
+                     ended_at = as.POSIXct(ended_at, format = "%d/%m/%Y %H:%M:%S"))
+
+dt_2023_08 <- mutate(dt_2023_08, 
+                     started_at = as.POSIXct(started_at, format = "%d/%m/%Y %H:%M:%S"),
+                     ended_at = as.POSIXct(ended_at, format = "%d/%m/%Y %H:%M:%S"))
+
+dt_2023_09 <- mutate(dt_2023_09, 
+                     started_at = as.POSIXct(started_at, format = "%d/%m/%Y %H:%M:%S"),
+                     ended_at = as.POSIXct(ended_at, format = "%d/%m/%Y %H:%M:%S"),
+                     tour_duration = NA,
+                     tour_duration = hms(tour_duration))
+
+dt_2023_10 <- mutate(dt_2023_10, 
+                     started_at = as.POSIXct(started_at, format = "%d/%m/%Y %H:%M:%S"),
+                     ended_at = as.POSIXct(ended_at, format = "%d/%m/%Y %H:%M:%S"))
+
+dt_2023_11 <- mutate(dt_2023_11, 
+                     started_at = as.POSIXct(started_at, format = "%d/%m/%Y %H:%M:%S"),
+                     ended_at = as.POSIXct(ended_at, format = "%d/%m/%Y %H:%M:%S"))
+
+dt_2023_12 <- mutate(dt_2023_12, 
+                     started_at = as.POSIXct(started_at, format = "%d/%m/%Y %H:%M:%S"),
+                     ended_at = as.POSIXct(ended_at, format = "%d/%m/%Y %H:%M:%S"))
+
+dt_2024_01 <- mutate(dt_2024_01, 
+                     started_at = as.POSIXct(started_at, format = "%d/%m/%Y %H:%M:%S"),
+                     ended_at = as.POSIXct(ended_at, format = "%d/%m/%Y %H:%M:%S"))
+
+dt_2024_02 <- mutate(dt_2024_02, 
+                     started_at = as.POSIXct(started_at, format = "%d/%m/%Y %H:%M:%S"),
+                     ended_at = as.POSIXct(ended_at, format = "%d/%m/%Y %H:%M:%S"))
+```
+##### The individual DataFrames have been stacked into one big DataFrame.
+```{r}
+dt_12_months <- bind_rows(dt_2023_03, dt_2023_04, dt_2023_05, dt_2023_06, dt_2023_07, dt_2023_08, dt_2023_09, dt_2023_10, dt_2023_11, dt_2023_12, dt_2024_01, dt_2024_02)
+
+```
+##### The latitude, longitude, year of birth and gender fields were removed, as this data was eliminated from 2020. 
+```{r}
+dt_12_months <- dt_12_months %>%
+select(-c(start_lat, start_lng, end_lat, end_lng))%>%
+  na.omit(dt_12_months)
+```
+### **Step 3:** Clean up and add data to prepare for analysis.
+
+#### Inspect the new table that has been created.
+```{r}
+colnames(dt_12_months)  #List of column names.
+nrow(dt_12_months)  #How many rows are in data frame?
+dim(dt_12_months)  #Dimensions of the data frame?
+head(dt_12_months)  #See the first 6 rows of data frame.  Also tail(dt_12_months)
+str(dt_12_months)  #See list of columns and data types (numeric, character, etc)
+summary(dt_12_months)  #Statistical summary of data. Mainly for numerics
+```
+##### It was analyzed how many observations fit each type of user.
+```{r}
+table(dt_12_months$member_casual)
+```
+##### As I am in *Portugal*, I needed to use the function to change my language. This way the days of the week are in English.
+```{r}
+Sys.setlocale("LC_TIME", "en_US.UTF-8")
+```
+#### Columns have been added that list the date, month, day and year of each ride.
+
+* This allowed us to aggregate travel data for each month, day or year. For more information about date formats in R,click in [Quick-R.](https://www.statmethods.net/input/dates.html)
+```{r}
+dt_12_months$date <- as.Date(dt_12_months$started_at) #The default format is yyyy-mm-dd
+dt_12_months$month <- format(as.Date(dt_12_months$date), "%m")
+dt_12_months$day <- format(as.Date(dt_12_months$date), "%d")
+dt_12_months$year <- format(as.Date(dt_12_months$date), "%Y")
+dt_12_months$day_of_week <- format(as.Date(dt_12_months$date), "%A")
+```
+##### The ride_length column was created to calculate dt_12_months in seconds.Click in [stat ethz](https://stat.ethz.ch/R-manual/R-devel/library/base/html/difftime.html) for more information.
+```{r}
+dt_12_months$ride_length <- difftime(dt_12_months$ended_at,dt_12_months$started_at)
+```
+##### Here the structure of the columns was inspected.
+```{r}
+str(dt_12_months)
+```
+##### The colum`ride_length`was converted from numeric factor for run calculations on the data.
+```{r}
+is.factor(dt_12_months$ride_length)
+dt_12_months$ride_length <- as.numeric(as.character(dt_12_months$ride_length))
+is.numeric(dt_12_months$ride_length)
+```
+#### "Bad" data has been removed.
+
+* The DataFrame could have included a few hundred entries when bikes were taken out of docks and checked for quality by Divvy or when `ride_length` was negative.
+
+* A new version of the DataFrame (`dt_12_months_v2`) was created as data was being removed.
+
+* For more information,click in [data science made simple.](https://www.datasciencemadesimple.com/delete-or-drop-rows-in-r-with-conditions-2/)
+```{r}
+dt_12_months_v2 <- dt_12_months[!(dt_12_months$start_station_name == "HQ QR" | dt_12_months$ride_length<0),]
+```
+### **Step 4:** Conduct descriptive analysis.
+
+#### Descriptive analysis on `ride_length` (all figures in seconds).
+```{r}
+mean(dt_12_months_v2$ride_length) #straight average (total ride length / rides)
+median(dt_12_months_v2$ride_length) #midpoint number in the ascending array of ride lengths
+max(dt_12_months_v2$ride_length) #longest ride
+min(dt_12_months_v2$ride_length) #shortest ride
+```
+##### `Member_casual` were compared.
+```{r}
+aggregate(dt_12_months_v2$ride_length ~ dt_12_months_v2$member_casual, FUN = mean)
+aggregate(dt_12_months_v2$ride_length ~ dt_12_months_v2$member_casual, FUN = median)
+aggregate(dt_12_months_v2$ride_length ~ dt_12_months_v2$member_casual, FUN = max)
+aggregate(dt_12_months_v2$ride_length ~ dt_12_months_v2$member_casual, FUN = min)
+```
+##### The average ride time by each day for `members` versus `casual` users was calculated.
+```{r}
+aggregate(dt_12_months_v2$ride_length ~ dt_12_months_v2$member_casual + dt_12_months_v2$day_of_week,
+FUN = mean)
+```
+##### The days of the week were put in order.
+```{r}
+dt_12_months_v2$day_of_week <- ordered(dt_12_months_v2$day_of_week, levels=c("Sunday", "Monday",
+"Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+```
+##### And a trip was also made by type and day of the week.
+```{r}
+dt_12_months_v2 %>%
+mutate(weekday = wday(started_at, label = TRUE)) %>% #creates weekday field using wday()
+group_by(member_casual, weekday) %>% #groups by usertype and weekday.
+summarise(number_of_rides = n() #calculates the number of rides and average duration.
+,average_duration = mean(ride_length)) %>% # calculates the average duration.
+arrange(member_casual, weekday) # sorts.
+```
+##### Then, a visualization of the number of rides by rider type was made.
+```{r}
+dt_12_months_v2 %>%
+mutate(weekday = wday(started_at, label = TRUE)) %>%
+group_by(member_casual, weekday) %>%
+summarise(number_of_rides = n()
+,average_duration = mean(ride_length)) %>%
+arrange(member_casual, weekday) %>%
+ggplot(aes(x = weekday, y = number_of_rides, fill = member_casual)) +
+geom_col(position = "dodge")+
+scale_x_discrete(labels = c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")) +
+labs(title = "1°chart: Number of Rides by User Type.",
+       subtitle = "Number of rides by user type during the week.")+
+  theme(plot.title = element_text(face = "bold"),
+          axis.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
+```
+
+### **Discussion I:** Analyzing the 1°chart. 
+
+Answering the question directly: 
+
+**In what ways do members and casual riders use Divvy bikes differently?**
+
+In relation to the last 12 months that this analysis was undertaken (2023_02 to 2024_02), analyzing the 1st chart, we can infer that Friday is the preferred day for casual riders to use the Divvy bikes, however, according to the chart, this superiority is very subtle, showing a certain equivalence in the number of times This type of user rides this service. Still according to the 1st chart, an alternation in the number of rides by casual riders is also observed, which, taking the days of the week as a reference, on Sunday there is an increase in the number of rides with a decrease on Monday, returning to rise on Tuesday, maintaining this alternation throughout the week. Sunday is the day with the lowest number of rides made by casual riders. And finally, the number of rides by casual riders has the biggest decrease from Friday to Saturday.
+
+**Other inferences.**
+
+* Both casual riders and member make more rides on Friday than on any other day.
+* Member users make fewer rides on Thursday, while casual riders make fewer rides on Sunday.
+* The number of rides by member is higher than that of casual riders on all days of the week.
+* The number of rides of member exceeds twice the number of rides of casual riders on Sunday.
+* The number of member user rides has the largest decrease from Wednesday to Thursday.
+
+##### A visualization of the average duration was made.
+```{r}
+dt_12_months_v2 %>%
+mutate(weekday = wday(started_at, label = TRUE)) %>%
+group_by(member_casual, weekday) %>%
+summarise(number_of_rides = n()
+,average_duration = mean(ride_length)) %>%
+arrange(member_casual, weekday) %>%
+ggplot(aes(x = weekday, y = average_duration, fill = member_casual)) +
+geom_col(position = "dodge")+
+scale_x_discrete(labels = c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")) +
+labs(title = "2°chart: Average Ride Duration by Rider Type.",
+       subtitle = "Average ride duration by rider type throughout the week.")+
+  theme(plot.title = element_text(face = "bold"),
+          axis.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
+```
+
+### **Discussion II:** Analyzing the 2°chart. 
+
+Answering the question directly: 
+
+**In what ways do members and casual riders use Divvy bikes differently?**
+
+In relation to the last 12 months that this analysis was undertaken (2023_02 to 2024_02), analyzing the 2st chart, shows that the average ride duration of casual riders is considerably longer than that of members. Saturday being the day with the longest average duration of rides for these types of users. It is noted that the average duration of rides by casual riders has a steep rise from Thursday to Saturday and tends to suffer a huge drop on Sunday.
+
+**Other inferences.**
+
+* The average rides length of members is significantly shorter than the average rides length of casual riders.
+* The chart shows a modest average duration of member riders in the middle of the week (Monday to Wednesday).
+
+### **Export summary file for further analysis.** 
+
+* A csv file was created for future visualization work using Excel, Tableau or other presentation software.
+```{r}
+counts <- aggregate(dt_12_months_v2$ride_length ~ dt_12_months_v2$member_casual +
+dt_12_months_v2$day_of_week, FUN = mean)
+write.csv(counts, file = "C:/Users/cassi/Documents/R_STUDIO/DIVVY_TRIP_DATA/summary_file.csv")
+```
+### **Recommendations:** Top three recommendations based on the analysis. 
+
+* As these are recommendations, I will be bold in them, in order to demonstrate commitment to engaging new members from casual riders. There will be 3 recommendations that I will present.
+With Friday being the preferred day for casual riders to use Divvy bikes, I would suggest this day to interested parties for a campaign to gain new members. In Brazil, a saying is widely used that says: “Até que enfim é sexta-feira!”, which means thanks for the weekend that is coming. Maybe an engagement program, where each new member would be rewarded with a bottle of water with the phrase **“It’s finally Friday!”** it would connect playfulness, happiness at the arrival of the weekend, health brought by a bottle of water and the beginning of a lasting relationship with health through the new loyalty plan.
+
+* Regarding the average rides duration of casual riders being considerably longer than that of members, a strategic plan that rewards members for each kilometer traveled would be a way to increase the average duration of rides. Perhaps the initial idea of the water bottle could bring with it spaces where there would be a type of brand or badge as a bonus for the number of kilometers cycled. Perhaps, in this bottle, the last day would be Friday as our “famous phrase”, with the other days of the week being conquered by riders according to their evolution by the number of kilometers covered. This award would be linked to the days of the week, which, through data control, would result in the days with the least use of the service being the highest scored.
+
+* Bicycle maintenance is extremely important, however, the maintenance service reduces the fleet of bicycles available for the service. In order to continue to offer the best service and provide all the responsibilities of preventive maintenance, as a recommendation, I understand that the best day for a maintenance service, both for bicycles and other tests throughout the company's ecosystem, would be on Thursday, as this is the day with the lowest use of bicycles by members, both in terms of number of rides and the average length of rides.
+
+### **Limitations and final considerations.**
+
+* Considering that I am starting my career as a data analyst, this final project taught me much more than I did myself. I understand that mistakes may reflect my inexperience, however my will and dedication can be seen.
+
+* I hope that with this first project I can connect with this new professional world for me and that future employers, interested parties and future data analyst colleagues see through this project a professional ready to help, add value and constantly learning.
+
+
+Sincerely,
+
+Cassiano Oliveira.
+
+
